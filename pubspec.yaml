@@ -1,0 +1,35 @@
+name: sayyar
+description: SAYYAR Iraq navigation app
+publish_to: "none"
+version: 1.0.0+2
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
+  geolocator: ^14.0.2
+  http: ^1.4.0
+  flutter_tts: ^4.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/sayyar_icon.png
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/sayyar_icon.png
+  adaptive_icon_background: "#080817"
+  adaptive_icon_foreground: assets/sayyar_icon.png

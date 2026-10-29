@@ -1,0 +1,1 @@
+The GitHub Actions workflow automatically adds INTERNET, ACCESS_FINE_LOCATION and ACCESS_COARSE_LOCATION permissions and sets the Android app label to SAYYAR. The app requests location permission on first launch. Launcher icon is generated from assets/sayyar_icon.png.
