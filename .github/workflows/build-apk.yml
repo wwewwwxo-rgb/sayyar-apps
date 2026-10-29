@@ -1,0 +1,54 @@
+
+name: Build SAYYAR APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download source
+        uses: actions/checkout@v4
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Check project
+        run: test -f pubspec.yaml && test -f lib/main.dart
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate Android project
+        run: flutter create --platforms=android --project-name sayyar .
+
+      - name: Set app name
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="SAYYAR"/' android/app/src/main/AndroidManifest.xml
+
+      - name: Set app icon
+        run: |
+          dart run flutter_launcher_icons
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SAYYAR-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
