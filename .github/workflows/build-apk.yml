@@ -4,50 +4,61 @@ name: Build SAYYAR APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
+    paths:
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Locate project
+    steps:
+      - name: Get latest source
+        uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 1
+
+      - name: Show source being built
         run: |
-          if [ -f pubspec.yaml ]; then
-            echo "PROJECT_DIR=." >> "$GITHUB_ENV"
-          elif [ -f SAYYAR_V2/pubspec.yaml ]; then
-            echo "PROJECT_DIR=SAYYAR_V2" >> "$GITHUB_ENV"
-          elif [ -f SAYYAR_V2/SAYYAR_V2/pubspec.yaml ]; then
-            echo "PROJECT_DIR=SAYYAR_V2/SAYYAR_V2" >> "$GITHUB_ENV"
-          else
-            echo "ERROR: pubspec.yaml not found"
-            find . -name pubspec.yaml
+          echo "Commit:"
+          git log -1 --oneline
+          echo "Checking old syntax:"
+          if grep -nE 'colorScheme:[[:space:]]*\.fromSeed|mainAxisAlignment:[[:space:]]*\.center' lib/main.dart; then
+            echo "ERROR: Old invalid syntax still exists in lib/main.dart"
             exit 1
           fi
+          echo "Source syntax check passed"
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - uses: subosito/flutter-action@v2
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: false
+
+      - name: Show Flutter and Dart versions
+        run: |
+          flutter --version
+          dart --version
 
       - name: Install dependencies
-        working-directory: ${{ env.PROJECT_DIR }}
         run: flutter pub get
 
-      - name: Generate Android project
-        working-directory: ${{ env.PROJECT_DIR }}
-        run: flutter create --platforms=android --project-name sayyar .
+      - name: Check Dart source
+        run: dart analyze --fatal-infos lib/main.dart
 
-      - name: Build APK
-        working-directory: ${{ env.PROJECT_DIR }}
+      - name: Build release APK
         run: flutter build apk --release
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: SAYYAR-APK
-          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
