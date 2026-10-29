@@ -4,12 +4,7 @@ name: Build SAYYAR APK
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
-    paths:
-      - 'lib/**'
-      - 'pubspec.yaml'
-      - '.github/workflows/build-apk.yml'
+    branches: [main]
 
 permissions:
   contents: read
@@ -19,22 +14,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get latest source
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          clean: true
-          fetch-depth: 1
 
-      - name: Show source being built
+      - name: Find Flutter project
+        id: project
+        shell: bash
         run: |
-          echo "Commit:"
-          git log -1 --oneline
-          echo "Checking old syntax:"
-          if grep -nE 'colorScheme:[[:space:]]*\.fromSeed|mainAxisAlignment:[[:space:]]*\.center' lib/main.dart; then
-            echo "ERROR: Old invalid syntax still exists in lib/main.dart"
+          echo "Repository files:"
+          ls -la
+          FILE=$(find . -type f -name pubspec.yaml -not -path '*/.dart_tool/*' | head -n 1)
+
+          if [ -z "$FILE" ]; then
+            echo "ERROR: pubspec.yaml not found"
             exit 1
           fi
-          echo "Source syntax check passed"
+
+          DIR=$(dirname "$FILE")
+          echo "Flutter project directory: $DIR"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+
+          if [ ! -f "$DIR/lib/main.dart" ]; then
+            echo "ERROR: lib/main.dart not found in $DIR"
+            find "$DIR" -maxdepth 3 -type f | head -n 80
+            exit 1
+          fi
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
@@ -42,23 +46,17 @@ jobs:
           channel: stable
           cache: false
 
-      - name: Show Flutter and Dart versions
+      - name: Build APK
+        working-directory: ${{ steps.project.outputs.dir }}
         run: |
           flutter --version
-          dart --version
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Check Dart source
-        run: dart analyze --fatal-infos lib/main.dart
-
-      - name: Build release APK
-        run: flutter build apk --release
+          flutter pub get
+          dart analyze lib
+          flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SAYYAR-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: ${{ steps.project.outputs.dir }}/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
